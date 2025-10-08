@@ -1,9 +1,12 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
 
-from .models import Product, Order, OrderItem
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
-import json
+from .models import Product
+from .serializers import OrderSerializer
 
 
 def banners_list_api(request):
@@ -58,26 +61,15 @@ def product_list_api(request):
     })
 
 
+@api_view(['POST'])
 def register_order(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
+        serializer = OrderSerializer(data=request.data)
 
-        order = Order.objects.create(
-            firstname=data['firstname'],
-            lastname=data['lastname'],
-            phone_number=data['phonenumber'],
-            address=data['address']
-        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'status': 'ok'})
 
-        for item in data['products']:
-            product = Product.objects.get(id=item['product'])
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=item['quantity'],
-                price=product.price
-            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return JsonResponse({'status': 'ok'})
-
-    return JsonResponse({'error': 'Метод не поддерживается'}, status=405)
+    return Response({'error': 'Метод не поддерживается'}, status=405)
