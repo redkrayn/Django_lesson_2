@@ -137,7 +137,7 @@ class Order(models.Model):
         blank=True,
         null=True
     )
-    phone_number = PhoneNumberField(
+    phonenumber = PhoneNumberField(
         verbose_name='Номер телефона',
         blank=True,
         null=True,

@@ -13,13 +13,13 @@ class OrderSerializer(serializers.Serializer):
     lastname = serializers.CharField()
     phonenumber = serializers.CharField()
     address = serializers.CharField()
-    products = OrderItemSerializer(many=True)
+    products = OrderItemSerializer(many=True, write_only=True)
 
     def validate_phonenumber(self, value):
         try:
-            phone_number = parse(value, "RU")
+            phonenumber = parse(value, "RU")
 
-            if not is_valid_number(phone_number):
+            if not is_valid_number(phonenumber):
                 raise serializers.ValidationError("Введен некорректный номер телефона")
 
         except NumberParseException:
@@ -49,7 +49,7 @@ class OrderSerializer(serializers.Serializer):
         order = Order.objects.create(
             firstname=validated_data.get('firstname', ''),
             lastname=validated_data['lastname'],
-            phone_number=validated_data['phonenumber'],
+            phonenumber=validated_data['phonenumber'],
             address=validated_data['address']
         )
 

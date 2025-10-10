@@ -68,7 +68,7 @@ def register_order(request):
 
         if serializer.is_valid():
             serializer.save()
-            return Response({'status': 'ok'})
+            return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
