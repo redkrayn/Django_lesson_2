@@ -143,6 +143,12 @@ class OrderQuerySet(models.QuerySet):
 
 
 class Order(models.Model):
+    ORDER_STATUS = [
+        ('accepted', 'Принят'),
+        ('in_progress', 'Собирается'),
+        ('in_delivery', 'Доставляется'),
+        ('completed', 'Завершён'),
+    ]
     firstname = models.CharField(
         verbose_name='Имя',
         max_length=20,
@@ -166,6 +172,13 @@ class Order(models.Model):
         max_length=50,
         blank=True,
         null=True
+    )
+    status = models.CharField(
+        choices=ORDER_STATUS,
+        max_length=50,
+        default='accepted',
+        verbose_name='Статус',
+        db_index=True,
     )
 
     def __str__(self):
