@@ -144,10 +144,14 @@ class OrderQuerySet(models.QuerySet):
 
 
 class Order(models.Model):
+    PAYMENT_METHOD = [
+        ('cash', 'Наличностью'),
+        ('web_cash', 'Электронно'),
+    ]
     ORDER_STATUS = [
-        ('accepted', 'Принят'),
-        ('in_progress', 'Собирается'),
-        ('in_delivery', 'Доставляется'),
+        ('accepted', 'Не обработан'),
+        ('in_progress', 'В сборке'),
+        ('in_delivery', 'В доставке'),
         ('completed', 'Завершён'),
     ]
     firstname = models.CharField(
@@ -200,6 +204,13 @@ class Order(models.Model):
         blank=True,
         null=True,
         verbose_name='Дата доставки',
+        db_index=True
+    )
+    payment_method = models.CharField(
+        choices=PAYMENT_METHOD,
+        default='cash',
+        max_length=30,
+        verbose_name='Способ оплаты',
         db_index=True
     )
 
