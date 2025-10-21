@@ -213,6 +213,14 @@ class Order(models.Model):
         verbose_name='Способ оплаты',
         db_index=True
     )
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.CASCADE,
+        related_name='orders',
+        verbose_name='Ресторан',
+        blank=True,
+        null=True
+    )
 
     def __str__(self):
         return f"{self.firstname} {self.lastname} {self.address}"
@@ -238,7 +246,8 @@ class OrderItem(models.Model):
     )
     quantity = models.PositiveIntegerField(
         default=1,
-        verbose_name='количество'
+        verbose_name='количество',
+        validators=[MinValueValidator(1)]
     )
     price = models.DecimalField(
         max_digits=8,

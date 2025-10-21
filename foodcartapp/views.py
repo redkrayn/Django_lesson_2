@@ -1,5 +1,8 @@
+import requests
+from requests import RequestException
 from django.http import JsonResponse
 from django.templatetags.static import static
+from django.conf import settings
 
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -9,6 +12,8 @@ from .models import Product
 from .serializers import OrderSerializer
 
 from django.db import transaction
+
+from geocoordapp.models import Place
 
 
 def banners_list_api(request):
@@ -63,6 +68,28 @@ def product_list_api(request):
     })
 
 
+def fetch_coordinates(apikey, address):
+    base_url = "https://geocode-maps.yandex.ru/1.x"
+    try:
+        response = requests.get(base_url, params={
+            "geocode": address,
+            "apikey": apikey,
+            "format": "json",
+        })
+        response.raise_for_status()
+        found_places = response.json()['response']['GeoObjectCollection']['featureMember']
+
+        if not found_places:
+            return None
+
+        most_relevant = found_places[0]
+        lon, lat = most_relevant['GeoObject']['Point']['pos'].split(" ")
+        return float(lat), float(lon)
+
+    except (RequestException, KeyError, ValueError, TypeError):
+        return None
+
+
 @transaction.atomic
 @api_view(['POST'])
 def register_order(request):
@@ -70,7 +97,12 @@ def register_order(request):
         serializer = OrderSerializer(data=request.data)
 
         if serializer.is_valid():
-            serializer.save()
+            order = serializer.save()
+
+            if not Place.objects.filter(address=order.address).first():
+                coords = fetch_coordinates(settings.GEOAPP_TOKEN, order.address)
+                lat, lon = coords if coords else (None, None)
+                Place.objects.create(address=order.address, lat=lat, lon=lon)
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

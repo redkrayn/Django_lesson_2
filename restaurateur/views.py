@@ -3,12 +3,13 @@ from django.shortcuts import redirect, render
 from django.views import View
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
+from geopy.distance import geodesic
 
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 
-
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem
+from geocoordapp.models import Place
 
 
 class Login(forms.Form):
@@ -92,7 +93,73 @@ def view_restaurants(request):
 
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
-    order_items = Order.objects.total_price()
-    return render(request, template_name='order_items.html', context={
-        'order_items': order_items,
-    })
+    orders = Order.objects.total_price().filter(status='accepted').prefetch_related(
+        'items__product'
+    )
+
+    orders_in_progress = Order.objects.total_price().filter(status='in_progress')
+    orders_in_delivery = Order.objects.total_price().filter(status='in_delivery')
+
+    restaurants_items = RestaurantMenuItem.objects.filter(
+        availability=True
+    ).select_related('restaurant', 'product')
+
+    restaurants = Restaurant.objects.all().select_related()
+
+    order_addresses = [order.address for order in orders]
+    restaurant_addresses = [restaurant.address for restaurant in restaurants]
+
+    all_addresses = set(order_addresses + restaurant_addresses)
+    places = Place.objects.filter(address__in=all_addresses)
+    places_dict = {place.address: place for place in places}
+
+    product_restaurants = {}
+    for item in restaurants_items:
+        if item.product_id not in product_restaurants:
+            product_restaurants[item.product_id] = []
+        product_restaurants[item.product_id].append(item.restaurant)
+
+    for order in orders:
+        order.available_restaurants = []
+        available_restaurants = []
+
+        for item in order.items.all():
+            item_restaurants = product_restaurants.get(item.product_id, [])
+            item.available_restaurants = [r.id for r in item_restaurants]
+            available_restaurants.append(item.available_restaurants)
+
+        if available_restaurants:
+            common_restaurants = list(set.intersection(*[set(arr) for arr in available_restaurants]))
+
+            for common_restaurant in common_restaurants:
+                restaurant = next((r for r in restaurants if r.id == common_restaurant), None)
+                if not restaurant:
+                    continue
+
+                order_place = places_dict.get(order.address)
+                restaurant_place = places_dict.get(restaurant.address)
+
+                if (not order_place or not order_place.lat or not order_place.lon or
+                    not restaurant_place or not restaurant_place.lat or not restaurant_place.lon):
+                    distance = 'ошибка в оценке расстояния, '
+                    order.available_restaurants.append({restaurant.name: distance})
+                else:
+                    distance = round(geodesic(
+                        (order_place.lat, order_place.lon),
+                        (restaurant_place.lat, restaurant_place.lon)
+                    ).km, 2)
+                    order.available_restaurants.append({restaurant.name: distance})
+
+        order.available_restaurants = sorted(order.available_restaurants, key=lambda x: (
+            0, list(x.values())[0]) if isinstance(list(x.values())[0], (int, float)) else (
+            1, str(list(x.values())[0])))
+
+    return render(
+        request,
+        template_name='order_items.html',
+        context={
+            'order_items': orders,
+            'order_in_progress': orders_in_progress,
+            'order_in_delivery': orders_in_delivery
+        }
+    )
