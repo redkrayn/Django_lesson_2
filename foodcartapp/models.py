@@ -180,6 +180,7 @@ class Order(models.Model):
         verbose_name='Статус',
         db_index=True,
     )
+    comment = models.TextField(blank=True, verbose_name='Комментарий')
 
     def __str__(self):
         return f"{self.firstname} {self.lastname} {self.address}"
