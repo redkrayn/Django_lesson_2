@@ -97,12 +97,8 @@ def register_order(request):
         serializer = OrderSerializer(data=request.data)
 
         if serializer.is_valid():
-            order = serializer.save()
+            serializer.save()
 
-            if not Place.objects.filter(address=order.address).first():
-                coords = fetch_coordinates(settings.GEOAPP_TOKEN, order.address)
-                lat, lon = coords if coords else (None, None)
-                Place.objects.create(address=order.address, lat=lat, lon=lon)
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
