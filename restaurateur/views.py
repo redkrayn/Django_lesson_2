@@ -1,6 +1,7 @@
 from django import forms
 from django.shortcuts import redirect, render
 from django.views import View
+from django.conf import settings
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import user_passes_test
 from geopy.distance import geodesic
@@ -10,6 +11,7 @@ from django.contrib.auth import views as auth_views
 
 from foodcartapp.models import Product, Restaurant, Order, RestaurantMenuItem
 from geocoordapp.models import Place
+from geocoordapp.views import fetch_coordinates
 
 
 class Login(forms.Form):
@@ -110,6 +112,21 @@ def view_orders(request):
     restaurant_addresses = [restaurant.address for restaurant in restaurants]
 
     all_addresses = set(order_addresses + restaurant_addresses)
+
+    existing_places = Place.objects.filter(address__in=all_addresses)
+    existing_addresses = set(place.address for place in existing_places)
+
+    missing_addresses = all_addresses - existing_addresses
+
+    for address in missing_addresses:
+        if not Place.objects.filter(address=address).exists():
+            coords = fetch_coordinates(settings.GEOAPP_TOKEN, address)
+            lat, lon = coords if coords else (None, None)
+            Place.objects.get_or_create(
+                address=address,
+                defaults={'lat': lat, 'lon': lon}
+            )
+
     places = Place.objects.filter(address__in=all_addresses)
     places_dict = {place.address: place for place in places}
 
