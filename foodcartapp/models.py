@@ -177,6 +177,12 @@ class Order(models.Model):
         verbose_name='Статус',
         db_index=True,
     )
+    payment_method = models.CharField(
+        choices=PAYMENT_METHOD,
+        max_length=30,
+        verbose_name='Способ оплаты',
+        db_index=True
+    )
     comment = models.TextField(
         blank=True,
         verbose_name='Комментарий'
@@ -198,12 +204,6 @@ class Order(models.Model):
         verbose_name='Дата доставки',
         db_index=True
     )
-    payment_method = models.CharField(
-        choices=PAYMENT_METHOD,
-        max_length=30,
-        verbose_name='Способ оплаты',
-        db_index=True
-    )
     restaurant = models.ForeignKey(
         Restaurant,
         on_delete=models.CASCADE,
@@ -213,14 +213,14 @@ class Order(models.Model):
         null=True
     )
 
-    def __str__(self):
-        return f"{self.firstname} {self.lastname} {self.address}"
-
     objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
+
+    def __str__(self):
+        return f"{self.firstname} {self.lastname} {self.address}"
 
 
 class OrderItem(models.Model):
