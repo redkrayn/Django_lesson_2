@@ -206,7 +206,7 @@ class Order(models.Model):
     )
     restaurant = models.ForeignKey(
         Restaurant,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='orders',
         verbose_name='Ресторан',
         blank=True,
