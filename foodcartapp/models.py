@@ -3,6 +3,9 @@ from django.core.validators import MinValueValidator
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 from django.db.models import F, Prefetch, Sum
+from geocoordapp.models import Place
+from geocoordapp.views import fetch_coordinates
+from geopy.distance import geodesic
 
 
 class Restaurant(models.Model):
@@ -141,6 +144,95 @@ class OrderQuerySet(models.QuerySet):
                 )
             )
         )
+
+    def with_available_restaurants(self):
+        orders = self
+        if not orders:
+            return orders
+
+        restaurants_items = RestaurantMenuItem.objects.filter(
+            availability=True
+        ).select_related('restaurant', 'product')
+
+        restaurants = Restaurant.objects.all()
+
+        order_addresses = [order.address for order in orders]
+        restaurant_addresses = [restaurant.address for restaurant in restaurants]
+        all_addresses = set(order_addresses + restaurant_addresses)
+
+        places = Place.objects.filter(address__in=all_addresses)
+        places_dict = {place.address: place for place in places}
+
+        missing_addresses = [address for address in all_addresses
+                             if address not in places_dict or
+                             not places_dict[address].lat or
+                             not places_dict[address].lon]
+
+        for address in missing_addresses:
+            from django.conf import settings
+            coordinates = fetch_coordinates(settings.GEOAPP_TOKEN, address)
+
+            if coordinates:
+                lat, lon = coordinates
+                place, created = Place.objects.get_or_create(address=address)
+                place.lat = lat
+                place.lon = lon
+                place.save()
+                places_dict[address] = place
+            else:
+                place, created = Place.objects.get_or_create(address=address)
+                place.lat = None
+                place.lon = None
+                place.save()
+                places_dict[address] = place
+
+        places = Place.objects.filter(address__in=all_addresses)
+        places_dict = {place.address: place for place in places}
+
+        product_restaurants = {}
+        for item in restaurants_items:
+            if item.product_id not in product_restaurants:
+                product_restaurants[item.product_id] = []
+            product_restaurants[item.product_id].append(item.restaurant)
+
+        for order in orders:
+            order.available_restaurants = []
+            available_restaurants = []
+
+            for item in order.items.all():
+                item_restaurants = product_restaurants.get(item.product_id, [])
+                item.available_restaurants = [r.id for r in item_restaurants]
+                available_restaurants.append(item.available_restaurants)
+
+            if available_restaurants:
+                common_restaurants = list(set.intersection(*[set(arr) for arr in available_restaurants]))
+
+                for common_restaurant in common_restaurants:
+                    restaurant = next((r for r in restaurants if r.id == common_restaurant), None)
+                    if not restaurant:
+                        continue
+
+                    order_place = places_dict.get(order.address)
+                    restaurant_place = places_dict.get(restaurant.address)
+
+                    if not order_place or not order_place.lat or not order_place.lon:
+                        distance = 'адрес не найден'
+                        order.available_restaurants.append({restaurant.name: distance})
+                    elif not restaurant_place or not restaurant_place.lat or not restaurant_place.lon:
+                        distance = 'адрес ресторана не найден'
+                        order.available_restaurants.append({restaurant.name: distance})
+                    else:
+                        distance = round(geodesic(
+                            (order_place.lat, order_place.lon),
+                            (restaurant_place.lat, restaurant_place.lon)
+                        ).km, 2)
+                        order.available_restaurants.append({restaurant.name: distance})
+
+            order.available_restaurants = sorted(order.available_restaurants, key=lambda x: (
+                0, list(x.values())[0]) if isinstance(list(x.values())[0], (int, float)) else (
+                1, str(list(x.values())[0])))
+
+        return orders
 
 
 class Order(models.Model):
