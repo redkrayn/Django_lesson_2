@@ -156,27 +156,19 @@ class Order(models.Model):
     ]
     firstname = models.CharField(
         verbose_name='Имя',
-        max_length=20,
-        blank=True,
-        null=True
+        max_length=20
     )
     lastname = models.CharField(
         verbose_name='Фамилия',
-        max_length=20,
-        blank=True,
-        null=True
+        max_length=20
     )
     phonenumber = PhoneNumberField(
         verbose_name='Номер телефона',
-        blank=True,
-        null=True,
         db_index=True
     )
     address = models.CharField(
         verbose_name='Адрес',
-        max_length=50,
-        blank=True,
-        null=True
+        max_length=50
     )
     status = models.CharField(
         choices=ORDER_STATUS,
@@ -208,7 +200,6 @@ class Order(models.Model):
     )
     payment_method = models.CharField(
         choices=PAYMENT_METHOD,
-        default='cash',
         max_length=30,
         verbose_name='Способ оплаты',
         db_index=True
