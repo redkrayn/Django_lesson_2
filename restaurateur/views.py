@@ -96,7 +96,8 @@ def view_restaurants(request):
 @user_passes_test(is_manager, login_url='restaurateur:login')
 def view_orders(request):
     orders = Order.objects.total_price().filter(status='accepted').prefetch_related(
-        'items__product'
+        'items__product',
+        'restaurant'
     )
 
     orders_in_progress = Order.objects.total_price().filter(status='in_progress')
