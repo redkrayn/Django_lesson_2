@@ -17,9 +17,9 @@ class Place(models.Model):
         verbose_name='Адрес',
         unique=True,
     )
-    request = models.TimeField(
+    updated_at = models.TimeField(
         auto_now=True,
-        verbose_name='Api',
+        verbose_name='Время обновления',
     )
 
     class Meta:
