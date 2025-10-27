@@ -13,7 +13,7 @@ class OrderSerializer(serializers.Serializer):
     lastname = serializers.CharField()
     phonenumber = serializers.CharField()
     address = serializers.CharField()
-    products = OrderItemSerializer(many=True, write_only=True)
+    products = OrderItemSerializer(many=True, write_only=True, allow_empty=False)
 
     def validate_phonenumber(self, value):
         try:
@@ -28,9 +28,6 @@ class OrderSerializer(serializers.Serializer):
         return value
 
     def validate_products(self, value):
-        if not value:
-            raise serializers.ValidationError("Заказ должен содержать хотя бы один товар")
-
         product_ids = [item['product'] for item in value]
         existing_products = Product.objects.filter(id__in=product_ids)
         existing_product_ids = set(existing_products.values_list('id', flat=True))
