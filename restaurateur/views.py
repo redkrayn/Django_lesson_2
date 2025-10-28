@@ -94,12 +94,17 @@ def view_orders(request):
     orders = Order.objects.total_price().filter(
         status='accepted'
     ).prefetch_related(
-        'items__product',
+        'items__product'
+    ).select_related(
         'restaurant'
     ).with_available_restaurants()
 
-    orders_in_progress = Order.objects.total_price().filter(status='in_progress')
-    orders_in_delivery = Order.objects.total_price().filter(status='in_delivery')
+    orders_in_progress = Order.objects.total_price().filter(status='in_progress').select_related(
+        'restaurant'
+    )
+    orders_in_delivery = Order.objects.total_price().filter(status='in_delivery').select_related(
+        'restaurant'
+    )
 
     return render(
         request,
