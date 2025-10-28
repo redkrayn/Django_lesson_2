@@ -8,6 +8,11 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 
 from foodcartapp.models import Product, Restaurant, Order
+from geocoordapp.models import Place
+from geocoordapp.views import fetch_coordinates
+from geopy.distance import geodesic
+
+from star_burger import settings
 
 
 class Login(forms.Form):
@@ -98,6 +103,68 @@ def view_orders(request):
     ).select_related(
         'restaurant'
     ).with_available_restaurants()
+
+    restaurants = Restaurant.objects.all()
+
+    all_addresses = set()
+    for order in orders:
+        all_addresses.add(order.address)
+        for restaurant_id in getattr(order, 'available_restaurant_ids', []):
+            restaurant = next((r for r in restaurants if r.id == restaurant_id), None)
+            if restaurant:
+                all_addresses.add(restaurant.address)
+
+    places = Place.objects.filter(address__in=all_addresses)
+    existing_places = {place.address: place for place in places}
+
+    missing_addresses = [address for address in all_addresses
+                         if address not in existing_places or
+                         not existing_places[address].lat or
+                         not existing_places[address].lon]
+
+    for address in missing_addresses:
+        coordinates = fetch_coordinates(settings.GEOAPP_TOKEN, address)
+        if coordinates:
+            lat, lon = coordinates
+            place, created = Place.objects.get_or_create(address=address)
+            place.lat = lat
+            place.lon = lon
+            place.save()
+            existing_places[address] = place
+        else:
+            place, created = Place.objects.get_or_create(address=address)
+            existing_places[address] = place
+
+    places_dict = existing_places
+
+    for order in orders:
+        order.available_restaurants = []
+        order.address_not_found = False
+
+        order_place = places_dict.get(order.address)
+        if not order_place or not order_place.lat or not order_place.lon:
+            order.address_not_found = True
+        else:
+            for restaurant_id in getattr(order, 'available_restaurant_ids', []):
+                restaurant = next((r for r in restaurants if r.id == restaurant_id), None)
+                if not restaurant:
+                    continue
+
+                restaurant_place = places_dict.get(restaurant.address)
+
+                if not restaurant_place or not restaurant_place.lat or not restaurant_place.lon:
+                    distance = 'адрес ресторана не найден'
+                    order.available_restaurants.append({restaurant.name: distance})
+                else:
+                    distance = round(geodesic(
+                        (order_place.lat, order_place.lon),
+                        (restaurant_place.lat, restaurant_place.lon)
+                    ).km, 2)
+                    order.available_restaurants.append({restaurant.name: distance})
+
+            order.available_restaurants = sorted(order.available_restaurants, key=lambda x: (
+                0, list(x.values())[0]) if isinstance(list(x.values())[0], (int, float)) else (
+                1, str(list(x.values())[0])))
 
     orders_in_progress = Order.objects.total_price().filter(status='in_progress').select_related(
         'restaurant'

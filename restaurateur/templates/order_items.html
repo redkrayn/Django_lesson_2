@@ -40,14 +40,22 @@
           {% else %}
             <td>
               <details>
-                <summary>Заказ могут выполнить:</summary>
-
-                {% for restaurant_info in item.available_restaurants %}
-                  {% for name, distance in restaurant_info.items %}
-                    <p>{{ name }} — {{ distance }} км</p>
+                {% if item.address_not_found %}
+                  <summary>Адрес не найден</summary>
+                {% else %}
+                  <summary>Заказ могут выполнить:</summary>
+                  {% for restaurant_info in item.available_restaurants %}
+                    {% for name, distance in restaurant_info.items %}
+                      <p>{{ name }} —
+                        {% if distance == 'адрес ресторана не найден' %}
+                          адрес ресторана не найден
+                        {% else %}
+                          {{ distance }} км
+                        {% endif %}
+                      </p>
+                    {% endfor %}
                   {% endfor %}
-                {% endfor %}
-
+                {% endif %}
               </details>
             </td>
           {% endif %}
@@ -58,7 +66,6 @@
       {% endfor %}
     </table>
   </div>
-
 
   <center>
     <h2>Заказы в сборке</h2>
