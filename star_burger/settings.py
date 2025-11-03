@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'rest_framework',
     'geocoordapp',
+    'rollbar',
 ]
 
 MIDDLEWARE = [
@@ -36,10 +37,12 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
 ]
 
 ROOT_URLCONF = 'star_burger.urls'
@@ -124,3 +127,10 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "assets"),
     os.path.join(BASE_DIR, "bundles"),
 ]
+
+ROLLBAR = {
+    'access_token': env('ROLLBAR_TOKEN', default=''),
+    'environment': env('ROLLBAR_ENV', 'production'),
+    'code_version': '1.0',
+    'root': BASE_DIR,
+}

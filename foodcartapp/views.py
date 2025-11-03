@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.templatetags.static import static
 
 from rest_framework import status
@@ -77,3 +77,8 @@ def register_order(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({'error': 'Метод не поддерживается'}, status=405)
+
+
+def test_rollbar(request):
+    1/0
+    return HttpResponse("Bye diggers")
