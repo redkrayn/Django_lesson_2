@@ -150,6 +150,8 @@ Parcel будет следить за файлами в каталоге `bundle
 - `ALLOWED_HOSTS` — [см. документацию Django](https://docs.djangoproject.com/en/5.2/ref/settings/#allowed-hosts)
 - `GEOAPP_TOKEN` — Я использовал яндекс геокодер получить ключ можно в [кабинете разработчика](https://developer.tech.yandex.ru/services)
 - `ROLLBAR_TOKEN` - Выдаётся на сайте: [Rollbar](https://app.rollbar.com/)
+- `ROLLBAR_ENV` - задать значение environment. Пример: development/production, по умолчанию production
+- `DATABASE_URL` - Адрес к БД. Пример: postgres://user:password@ip_or_localhost:5432/dbname
 
 ## Цели проекта
 
