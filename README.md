@@ -13,6 +13,7 @@
 
 Третий интерфейс — это админка. Преимущественно им пользуются программисты при разработке сайта. Также сюда заходит менеджер, чтобы обновить меню ресторанов Star Burger.
 
+Сайт располагается [здесь](https://pretenderstarburger.ru)
 ## Как запустить dev-версию сайта
 
 Для запуска сайта нужно запустить **одновременно** бэкенд и фронтенд, в двух терминалах.
@@ -152,6 +153,31 @@ Parcel будет следить за файлами в каталоге `bundle
 - `ROLLBAR_TOKEN` - Выдаётся на сайте: [Rollbar](https://app.rollbar.com/)
 - `ROLLBAR_ENV` - задать значение environment. Пример: development/production, по умолчанию production
 - `DATABASE_URL` - Адрес к БД. Пример: postgres://user:password@ip_or_localhost:5432/dbname
+
+Инструкция по быстрому обновлению кода на сервере:
+```
+set -euo pipefail
+cd /opt/Django_lesson_2
+git fetch origin
+git pull origin main
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+fi
+
+npm ci --dev --legacy-peer-deps
+rm -rf .parcel-cache
+
+./node_modules/.bin/parcel build bundles-src/index.js --dist-dir bundles --public-url="./"
+python manage.py collectstatic --noinput
+python manage.py migrate --noinput
+sudo systemctl restart star-burger
+sudo systemctl reload nginx
+```
 
 ## Цели проекта
 
